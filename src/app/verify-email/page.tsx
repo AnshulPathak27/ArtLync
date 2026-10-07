@@ -9,6 +9,7 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const email = searchParams.get('email')
+  const devVerifyUrl = searchParams.get('devVerifyUrl')
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'idle'>('idle')
   const [message, setMessage] = useState('')
@@ -100,7 +101,16 @@ function VerifyEmailContent() {
                 </button>
               </>
             )}
-            {status === 'idle' && (
+            {status === 'idle' && devVerifyUrl && (
+              <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+                <p className="font-medium text-indigo-800 mb-2">Development Mode - Verify Email:</p>
+                <p className="text-indigo-700 mb-2">Click the link below to verify your email:</p>
+                <a href={devVerifyUrl} className="text-indigo-600 hover:underline break-all" target="_blank" rel="noopener noreferrer">
+                  {devVerifyUrl}
+                </a>
+              </div>
+            )}
+            {status === 'idle' && !devVerifyUrl && (
               <>
                 <p className="text-gray-600 mb-4">
                   {email ? `Enter the verification code sent to ${email}` : 'Enter your email to receive a verification link'}

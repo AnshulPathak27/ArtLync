@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { randomUUID } from 'crypto'
 
 const verifySchema = z.object({
   token: z.string().min(1)
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  const verificationToken = crypto.randomUUID()
+  const verificationToken = randomUUID()
 
   await prisma.user.update({
     where: { id: user.id },
