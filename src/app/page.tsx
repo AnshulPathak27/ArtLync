@@ -1,101 +1,150 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { parseJsonArray } from '@/types'
 
-export default function Home() {
+async function getFeaturedCreators() {
+  const creators = await prisma.creatorProfile.findMany({
+    take: 6,
+    orderBy: { ratingAvg: 'desc' },
+    include: {
+      user: { select: { id: true, email: true, emailVerified: true } },
+      portfolioItems: { take: 1, orderBy: { createdAt: 'desc' } },
+      verificationSignals: { where: { verified: true } }
+    }
+  })
+  return creators.map(c => ({
+    ...c,
+    skills: parseJsonArray<string>(c.skills),
+    specialization: parseJsonArray<string>(c.specialization),
+    toolsUsed: parseJsonArray<string>(c.toolsUsed),
+    portfolioItems: c.portfolioItems.map(item => ({
+      ...item,
+      toolsUsed: parseJsonArray<string>(item.toolsUsed),
+      skillTags: parseJsonArray<string>(item.skillTags)
+    }))
+  }))
+}
+
+export default async function Home() {
+  const session = await getServerSession(authOptions)
+  const featuredCreators = await getFeaturedCreators()
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="text-2xl font-bold text-indigo-600">AI Creator Marketplace</Link>
+            <div className="flex items-center gap-4">
+              {session ? (
+                <>
+                  <Link href={session.user.role === 'CREATOR' ? '/dashboard' : '/briefs'} className="text-gray-700 hover:text-indigo-600">Dashboard</Link>
+                  <Link href="/creators" className="text-gray-700 hover:text-indigo-600">Browse Creators</Link>
+                  <a href="/api/auth/signout" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Sign Out</a>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="text-gray-700 hover:text-indigo-600">Sign In</Link>
+                  <Link href="/signup" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Get Started</Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </nav>
+
+      <section className="relative bg-gradient-to-b from-indigo-600 via-indigo-700 to-indigo-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
+              Hire the World&apos;s Best <span className="text-yellow-300">AI Creators</span>
+            </h1>
+            <p className="text-xl sm:text-2xl text-indigo-100 mb-8 max-w-3xl mx-auto">
+              Discover AI filmmakers, animators, and generative artists. Post briefs, review portfolios, and collaborate on cutting-edge content.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/signup?role=BRAND" className="bg-yellow-300 text-indigo-900 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-400 transition text-lg">
+                I'm a Brand - Post a Brief
+              </Link>
+              <Link href="/signup?role=CREATOR" className="border-2 border-yellow-300 text-yellow-300 px-8 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition text-lg">
+                I'm a Creator - Join Now
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent" />
+      </section>
+
+      <section className="py-16" style={{ backgroundColor: '#F5F7FF' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">
+              <span style={{ color: '#111827' }}>Featured</span>
+              <span style={{ color: '#4F46E5' }}> AI Creators</span>
+            </h2>
+            <div className="w-16 h-1 bg-yellow-300 mx-auto mt-3 rounded" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredCreators.map((creator) => (
+              <Link key={creator.id} href={`/creators/${creator.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition">
+                {creator.portfolioItems[0] && (
+                  <img src={creator.portfolioItems[0].mediaUrl} alt={creator.portfolioItems[0].title} className="w-full h-48 object-cover" />
+                )}
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg">{creator.displayName}</h3>
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{creator.bio}</p>
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {creator.specialization.slice(0, 3).map((spec) => (
+                      <span key={spec} className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded">{spec}</span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">★ {creator.ratingAvg}</span>
+                    <span>({creator.ratingCount} reviews)</span>
+                    {creator.verificationSignals.length > 0 && (
+                      <span className="text-green-600 flex items-center gap-1">✓ Verified</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/creators" className="text-indigo-600 hover:text-indigo-700 font-semibold">View All Creators →</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-xl text-center">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">1</div>
+              <h3 className="text-xl font-semibold mb-2">Post a Brief</h3>
+              <p className="text-gray-600">Define your project requirements, style, format, and commercial terms. Use AI-assist to structure your brief.</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl text-center">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">2</div>
+              <h3 className="text-xl font-semibold mb-2">Discover Creators</h3>
+              <p className="text-gray-600">Filter by skills, tools, specialization, and content type. View rich portfolios with workflow details.</p>
+            </div>
+            <div className="bg-white p-6 rounded-xl text-center">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">3</div>
+              <h3 className="text-xl font-semibold mb-2">Collaborate & Deliver</h3>
+              <p className="text-gray-600">Accept bids, manage engagements, share encrypted files, and leave reviews to build reputation.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-gray-900 text-gray-400 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p>AI Creator Marketplace - Built for the Hackathon</p>
+        </div>
       </footer>
     </div>
-  );
+  )
 }

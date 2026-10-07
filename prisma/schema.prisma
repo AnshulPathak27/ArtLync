@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  role            String   @default("CREATOR")
+  emailVerified   Boolean  @default(false)
+  verificationToken String?
+  publicKey       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  creatorProfile  CreatorProfile?
+  brandProfile    BrandProfile?
+  bids            Bid[]
+  engagements     Engagement[] @relation("BrandEngagements")
+  reviews         Review[]   @relation("BrandReviews")
+  conversations   Conversation[] @relation("UserConversations")
+  messages        Message[]
+  deliverableFiles DeliverableFile[]
+
+  @@map("users")
+}
+
+model BrandProfile {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String?
+  companyWebsite String?
+  verified       Boolean @default(false)
+
+  briefs         Brief[]
+
+  @@map("brand_profiles")
+}
+
+model CreatorProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  bio               String?
+  skills            String   @default("[]")
+  specialization    String   @default("[]")
+  toolsUsed         String   @default("[]")
+  location          String?
+  jobTypePreferences String   @default("[]")
+  ratingAvg         Float    @default(0)
+  ratingCount       Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  portfolioItems    PortfolioItem[]
+  verificationSignals VerificationSignal[]
+  socialLinks       SocialLink[]
+  bids              Bid[]
+  engagements       Engagement[] @relation("CreatorEngagements")
+  reviews           Review[]   @relation("CreatorReviews")
+  conversations     Conversation[]
+
+  @@map("creator_profiles")
+}
+
+model PortfolioItem {
+  id           String @id @default(cuid())
+  creatorId    String
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  title        String
+  mediaUrl     String
+  mediaType    String @default("IMAGE")
+  toolsUsed    String @default("[]")
+  skillTags    String @default("[]")
+  workflowNote String?
+  createdAt    DateTime @default(now())
+
+  @@map("portfolio_items")
+}
+
+model VerificationSignal {
+  id           String @id @default(cuid())
+  creatorId    String
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  type         String @default("TOOL")
+  label        String
+  verified     Boolean @default(false)
+  evidenceNote String?
+  createdAt    DateTime @default(now())
+
+  @@map("verification_signals")
+}
+
+model Brief {
+  id                     String   @id @default(cuid())
+  brandId                String
+  brand                  BrandProfile @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  title                  String
+  campaignRequirements   String
+  contentType            String
+  style                  String
+  formatAspectRatio      String
+  commercialUseRequirements String
+  jobType                String?
+  location               String?
+  budget                 Float?
+  status                 String   @default("OPEN")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  bids                   Bid[]
+  engagement             Engagement?
+  conversation           Conversation?
+
+  @@map("briefs")
+}
+
+model Bid {
+  id           String @id @default(cuid())
+  briefId      String
+  brief        Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  proposedRate Float
+  timeline     String
+  message      String?
+  status       String @default("PENDING")
+  createdAt    DateTime @default(now())
+
+  @@unique([briefId, creatorId])
+  @@map("bids")
+}
+
+model Engagement {
+  id           String @id @default(cuid())
+  briefId      String @unique
+  brief        Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      CreatorProfile @relation("CreatorEngagements", fields: [creatorId], references: [id], onDelete: Cascade)
+  brandId      String
+  brand        User @relation("BrandEngagements", fields: [brandId], references: [id], onDelete: Cascade)
+  status       String @default("IN_PROGRESS")
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  review       Review?
+  deliverableFiles DeliverableFile[]
+  conversation Conversation?
+
+  @@map("engagements")
+}
+
+model Review {
+  id           String @id @default(cuid())
+  engagementId String @unique
+  engagement   Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      CreatorProfile @relation("CreatorReviews", fields: [creatorId], references: [id], onDelete: Cascade)
+  brandUserId  String
+  brandUser    User @relation("BrandReviews", fields: [brandUserId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String
+  createdAt    DateTime @default(now())
+
+  @@map("reviews")
+}
+
+model SocialLink {
+  id           String @id @default(cuid())
+  creatorId    String
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  platform     String
+  url          String
+  createdAt    DateTime @default(now())
+
+  @@map("social_links")
+}
+
+model Conversation {
+  id           String @id @default(cuid())
+  briefId      String? @unique
+  brief        Brief? @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  brandUserId  String
+  brandUser    User @relation("UserConversations", fields: [brandUserId], references: [id], onDelete: Cascade)
+  engagementId String? @unique
+  engagement   Engagement? @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id              String @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  ciphertext      String
+  iv              String
+  createdAt       DateTime @default(now())
+
+  @@map("messages")
+}
+
+model DeliverableFile {
+  id              String @id @default(cuid())
+  engagementId    String
+  engagement      Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  uploaderId      String
+  uploader        User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  storageKey      String
+  iv              String
+  filename        String
+  createdAt       DateTime @default(now())
+
+  @@map("deliverable_files")
+}

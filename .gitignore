@@ -26,7 +26,21 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+
+# database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# AI/editor configs
+.agents/
+.claude/
+.cursor/
+.devin/
 
 # vercel
 .vercel
