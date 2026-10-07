@@ -40,8 +40,18 @@ export default async function Home() {
             <div className="flex items-center gap-4">
               {session ? (
                 <>
-                  <Link href={session.user.role === 'CREATOR' ? '/dashboard' : '/briefs'} className="text-gray-700 hover:text-indigo-600">Dashboard</Link>
-                  <Link href="/creators" className="text-gray-700 hover:text-indigo-600">Browse Creators</Link>
+                  <Link 
+                    href={session.user.role === 'CREATOR' ? '/jobs' : '/briefs'} 
+                    className="text-gray-700 hover:text-indigo-600"
+                  >
+                    Dashboard
+                  </Link>
+                  <Link 
+                    href={session.user.role === 'CREATOR' ? '/jobs' : '/creators'} 
+                    className="text-gray-700 hover:text-indigo-600"
+                  >
+                    {session.user.role === 'CREATOR' ? 'Find Work' : 'Hire a Creator'}
+                  </Link>
                   <a href="/api/auth/signout" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Sign Out</a>
                 </>
               ) : (
@@ -112,7 +122,18 @@ export default async function Home() {
             ))}
           </div>
           <div className="text-center mt-8">
-            <Link href="/creators" className="text-indigo-600 hover:text-indigo-700 font-semibold">View All Creators →</Link>
+            {session ? (
+              <Link 
+                href={session.user.role === 'CREATOR' ? '/jobs' : '/creators'} 
+                className="text-indigo-600 hover:text-indigo-700 font-semibold"
+              >
+                {session.user.role === 'CREATOR' ? 'View All Jobs →' : 'View All Creators →'}
+              </Link>
+            ) : (
+              <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                Sign in to view all
+              </Link>
+            )}
           </div>
         </div>
       </section>
