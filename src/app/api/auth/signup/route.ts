@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`
+  const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || `http://localhost:3000`
+  const verifyUrl = `${origin}/verify-email?token=${verificationToken}`
 
   return NextResponse.json({
     id: user.id,
